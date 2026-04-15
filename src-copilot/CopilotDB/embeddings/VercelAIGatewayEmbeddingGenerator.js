@@ -3,25 +3,25 @@ import dynamicImportESM from "../../../common-utils/dynamic-import-esm.js";
 import {EMBEDDING_API_KEY_SETTING} from "../../constants.js";
 import {embedManyWithRateLimitAvoidanceRetry} from "../../aisdk-wrappers/embedManyWithRateLimitAvoidanceRetry.js";
 
-let createGoogleGenerativeAI;
-export class GoogleEmbeddingGenerator extends EmbeddingGeneratorBase {
+const VERCEL_AI_GATEWAY_URL = 'https://ai-gateway.vercel.sh/v1';
+
+let createOpenAI;
+export class VercelAIGatewayEmbeddingGenerator extends EmbeddingGeneratorBase {
     constructor() {
-        super('gemini-embedding-001', 0, true, 64);
+        super('text-embedding-3-small', 0.02, true, 64);
     }
 
     async generateEmbedding(app, textArray, inputType) {
-        if (!createGoogleGenerativeAI) {
-            createGoogleGenerativeAI = (await dynamicImportESM("@ai-sdk/google")).createGoogleGenerativeAI;
+        if (!createOpenAI) {
+            createOpenAI = (await dynamicImportESM("@ai-sdk/openai")).createOpenAI;
         }
         textArray = this.getProcessedTextArray(textArray, inputType,
             "", "");
         const { embeddings } = await embedManyWithRateLimitAvoidanceRetry({
-            model: createGoogleGenerativeAI({
-                apiKey: app.settings[EMBEDDING_API_KEY_SETTING]
-            }).textEmbeddingModel(this.MODEL_NAME, {
-                taskType: inputType.toLowerCase() === "query" ? 'RETRIEVAL_QUERY' : 'RETRIEVAL_DOCUMENT',
-                outputDimensionality: 512
-            }),
+            model: createOpenAI({
+                apiKey: app.settings[EMBEDDING_API_KEY_SETTING],
+                baseURL: VERCEL_AI_GATEWAY_URL
+            }).embedding(this.MODEL_NAME),
             values: textArray,
         });
         return embeddings.map(embedding => new Float32Array(embedding));

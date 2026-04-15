@@ -33,6 +33,32 @@ export async function getLLMModel(appSettings) {
         const {createGoogleGenerativeAI} = await dynamicImportESM("@ai-sdk/google");
         return createGoogleGenerativeAI({
             apiKey: apiKey,
+            // Fixes though signature issue temporarily - not needed after upgrading to ai sdk v6
+            fetch: async (url, options) => {
+                if (options.body && typeof options.body === 'string') {
+                    try {
+                        const payload = JSON.parse(options.body);
+
+                        // Traverse the payload to find function calls missing the signature
+                        if (payload.contents && Array.isArray(payload.contents)) {
+                            payload.contents.forEach(content => {
+                                if (content.parts && Array.isArray(content.parts)) {
+                                    content.parts.forEach(part => {
+                                        if (part.functionCall && !part.thought_signature) {
+                                            // Inject Google's official bypass string
+                                            part.thought_signature = 'skip_thought_signature_validator';
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        options.body = JSON.stringify(payload);
+                    } catch (error) {
+                        console.error("Failed to intercept Google API request:", error);
+                    }
+                }
+                return fetch(url, options);
+            },
             baseURL: apiUrl // Default: https://generativelanguage.googleapis.com/v1beta
         }).languageModel(model);
     }
@@ -51,9 +77,16 @@ export async function getLLMModel(appSettings) {
             baseURL: apiUrl    // Default: https://api.openai.com/v1
         }).languageModel(model);
     }
-    else if (apiUrl.includes('fireworks')) {
-        const {createFireworks} = await dynamicImportESM("@ai-sdk/fireworks");
-        return createFireworks({
+    else if (apiUrl.includes('vercel')) { // Default: https://ai-gateway.vercel.sh/v1
+        const {createOpenAI} = await dynamicImportESM("@ai-sdk/openai");
+        return createOpenAI({
+            apiKey: apiKey,
+            baseURL: apiUrl
+        }).languageModel(model);
+    }
+    else if (apiUrl.includes('fireworks')) { // Default: https://api.fireworks.ai/inference/v1
+        const {createOpenAI} = await dynamicImportESM("@ai-sdk/openai");
+        return createOpenAI({
             apiKey: apiKey,
             baseURL: apiUrl
         }).languageModel(model.startsWith('accounts/fireworks/models/') ? model : `accounts/fireworks/models/${model}`);

@@ -97,13 +97,19 @@ export const getLLMProviderSettings = (provider) => {
         return {
             [LLM_API_KEY_SETTING]: process.env.GOOGLE_API_KEY,
             [LLM_API_URL_SETTING]: "https://generativelanguage.googleapis.com/v1beta",
-            [LLM_MODEL_SETTING]: "gemini-2.5-flash"
+            [LLM_MODEL_SETTING]: "gemini-3-flash-preview"
         }
     } else if (provider === 'fireworks') {
         return {
             [LLM_API_KEY_SETTING]: process.env.FIREWORKS_API_KEY,
             [LLM_API_URL_SETTING]: "https://api.fireworks.ai/inference/v1",
-            [LLM_MODEL_SETTING]: "deepseek-v3"
+            [LLM_MODEL_SETTING]: "minimax-m2p5"
+        }
+    } else if (provider === 'vercel-ai-gateway') {
+        return {
+            [LLM_API_KEY_SETTING]: process.env.VERCELAIGATEWAY_API_KEY,
+            [LLM_API_URL_SETTING]: "https://ai-gateway.vercel.sh/v1",
+            [LLM_MODEL_SETTING]: "gpt-4o-mini"
         }
     } else if (provider === 'local') {
         return {
